@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Scheduling</title>
+    <style>
+        .star {
+  font-size: 30px;
+  cursor: pointer;
+  color: gray;
+  transition: color 0.3s ease;
+}
+
+.star:hover {
+  color: gold;
+}
+
+#star-rating {
+  margin-bottom: 20px;
+}
+        .alert {
+      padding: 15px;
+      margin-bottom: 20px;
+      position: absolute; /* Formun üstüne gelecek şekilde sabitleme */
+      top: 20px; /* Üstten 20px mesafe */
+      left: 50%;
+      transform: translateX(-50%); /* Ekranın ortasına yerleştirme */
+      width: 80%; /* Alert kutusunun genişliği */
+      max-width: 500px; /* Maksimum genişlik */
+      border-radius: 5px;
+      z-index: 1000; /* Diğer içeriklerin üstünde olması için */
+    }
+      nav {
+          background-color: #ecf0f1;
+          padding: 10px;
+          display: flex;
+          justify-content: center;
+      }
+      nav a {
+          color: #2c3e50;
+          text-decoration: none;
+          padding: 10px 15px;
+          border-radius: 5px;
+          margin: 5px;
+          transition: background-color 0.3s ease;
+          cursor:pointer;
+      }
+      nav a:hover {
+          background-color: #3498db;
+          color: white;
+      }
+      .error {
+          background-color: #f8d7da;
+          color: #721c24;
+      }
+      .success {
+          background-color: #d4edda;
+          color: #155724;
+      }
+     .closebtn {
+      position: absolute;
+      top: 50%;
+      right: 15px;
+      transform: translateY(-50%);
+      font-size: 25px; /* Çarpıyı büyütme */
+      font-weight: bold;
+      color: inherit;
+      cursor: pointer;
+      transition: all 0.3s ease; /* Hover efekti için geçiş ekleyelim */
+    }
+
+    /* Hover efekti ekleyelim */
+    .closebtn:hover {
+      color: #721c24; /* Kırmızıya dönüşür */
+      transform: translateY(-50%) scale(1.2); /* Hover durumunda büyütme */
+    }
+      body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+          background-color: #f4f4f4;
+      }
+      header {
+          background-color: #333;
+          color: white;
+          padding: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+      }
+      header .logo {
+          display: flex;
+          align-items: center;
+      }
+      header .logo img {
+          height: 50px;
+          margin-right: 10px;
+      }
+      header h1 {
+          margin: 0;
+          text-align: center;
+          flex-grow: 1;
+      }
+      .content {
+          padding: 20px;
+      }
+      form {
+          background: white;
+          padding: 20px;
+          border-radius: 5px;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+          max-width: 400px;
+          margin: 0 auto;
+          user-select: none;
+      }
+      label {
+          display: block;
+          margin-bottom: 8px;
+          font-weight: bold;
+      }
+      .time-slot {
+          display: inline-block;
+          margin: 10px;
+          padding: 15px;
+          background-color: #f2f2f2;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+          text-align: center;
+          width: 80px;
+          user-select: none;
+      }
+      .time-slot:hover {
+          background-color: #ddd;
+      }
+      .selected {
+          background-color: #4CAF50;
+          color: white;
+      }
+      button {
+          width: 100%;
+          padding: 10px;
+          background-color: #333;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+      }
+      button:hover {
+          background-color: #555;
+      }
+      footer {
+          background-color: #333;
+          color: white;
+          text-align: center;
+          padding: 5px 10px;
+          position: fixed;
+          bottom: 0;
+          width: 100%;
+      }
+      .hidden {
+          display: none;
+      }
+
+      @media (max-width: 768px) {
+          .time-slot {
+              width: 60px;
+              padding: 10px;
+          }
+          form {
+              width: 100%;
+          }
+      }
+    </style>
+</head>
+<body>
+<header>
+    <div class="logo">
+        <a href="https://commons.wikimedia.org/wiki/File:Iste_logo.png" target="_blank">
+            <img th:src="@{/logo.png}" alt="Logo">
+        </a>
+    </div>
+    <h1>Yemekhane Randevu Sistemi</h1>
+    <div style="margin-left: auto; color: white; font-size: 16px;">
+        Hoşgeldin <span th:text="${username}">User</span>!
+    </div>
+</header>
+
+<nav>
+    <a onclick="showContent('appointments')">Randevu</a>
+    <a onclick="showContent('star')">Değerlendir</a>
+</nav>
+
+<!-- Hata mesajını göstermek için -->
+<div th:if="${error}" class="alert error">
+    <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+    <p th:text="${error}"></p>
+</div>
+
+<!-- Başarı mesajını göstermek için -->
+<div th:if="${success}" class="alert success">
+    <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+    <p th:text="${success}"></p>
+</div>
+
+<div class="content" id="appointments">
+    <form action="/appointment/create" method="post" th:object="${appointment}">
+        <label>Yemek saatinizi seçin</label>
+
+        <!-- Zaman seçeneklerini buton olarak sunuyoruz -->
+        <div id="timeSlots">
+            <div class="time-slot" onclick="selectTime('11:30')">11:30</div>
+            <div class="time-slot" onclick="selectTime('11:45')">11:45</div>
+            <div class="time-slot" onclick="selectTime('12:00')">12:00</div>
+            <div class="time-slot" onclick="selectTime('12:15')">12:15</div>
+            <div class="time-slot" onclick="selectTime('12:30')">12:30</div>
+            <div class="time-slot" onclick="selectTime('12:45')">12:45</div>
+            <div class="time-slot" onclick="selectTime('13:00')">13:00</div>
+            <div class="time-slot" onclick="selectTime('13:15')">13:15</div>
+            <div class="time-slot" onclick="selectTime('13:30')">13:30</div>
+            <div class="time-slot" onclick="selectTime('13:45')">13:45</div>
+            <div class="time-slot" onclick="selectTime('14:00')">14:00</div>
+            <div class="time-slot" onclick="selectTime('14:15')">14:15</div>
+            <div class="time-slot" onclick="selectTime('14:30')">14:30</div>
+            <div class="time-slot" onclick="selectTime('14:45')">14:45</div>
+            <div class="time-slot" onclick="selectTime('15:00')">15:00</div>
+        </div>
+
+        <!-- Gizli bir input alanı, seçilen saati saklar -->
+        <input type="hidden" name="appointmentTime" id="selectedTime" required>
+
+        <button type="submit">Gönder</button>
+    </form>
+</div>
+
+<div id="star" class="content hidden">
+
+    <!-- Form Başlangıcı -->
+    <form id="commentForm" action="/api/comments" method="POST">
+        <!-- Yorum Yapma Alanı -->
+        <textarea id="commentInput" name="content" placeholder="Yorumunuzu buraya yazın..." rows="4" cols="50"></textarea>
+
+        <!-- Yıldız Verme Alanı -->
+        <div id="star-rating">
+            <span class="star" data-value="1">&#9733;</span>
+            <span class="star" data-value="2">&#9733;</span>
+            <span class="star" data-value="3">&#9733;</span>
+            <span class="star" data-value="4">&#9733;</span>
+            <span class="star" data-value="5">&#9733;</span>
+        </div>
+
+        <!-- Gizli Yıldız Değeri -->
+        <input type="hidden" id="starValue" name="stars" value="0">
+
+        <!-- Buton -->
+        <br><br>
+        <button type="submit">Yorumu Gönder</button>
+    </form>
+</div>
+
+
+
+<footer>
+    <p>&copy;2025 İSTE Yemekhane Randevu Sistemi</p>
+    <p>Logo: <a href="https://commons.wikimedia.org/wiki/File:Iste_logo.png" target="_blank" style="color: #007bff;">İSTE Logo</a>. Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" style="color: #007bff;">CC BY-SA 4.0</a>.</p>
+</footer>
+
+<script>
+    // Zaman seçimi yapıldığında, tıklanan saati input alanına kaydeder ve butonu işaretler
+    function selectTime(time) {
+        // Tüm zamanları "seçilmeyen" duruma getir
+        var slots = document.querySelectorAll('.time-slot');
+        slots.forEach(function(slot) {
+            slot.classList.remove('selected');
+        });
+
+        // Seçilen zamanı input alanına kaydet
+        document.getElementById('selectedTime').value = time;
+
+        // Seçilen zaman butonunu işaretle
+        var selectedSlot = document.querySelector('.time-slot[onclick="selectTime(\'' + time + '\')"]');
+        selectedSlot.classList.add('selected');
+    }
+
+    function showContent(sectionId) {
+        const sections = document.querySelectorAll('.content');
+        sections.forEach(section => section.classList.add('hidden'));
+
+        document.getElementById(sectionId).classList.remove('hidden');
+    }
+
+      let selectedStars = 0;
+
+  // Yıldızlara tıklama işlevi
+  const stars = document.querySelectorAll(".star");
+  stars.forEach(star => {
+    star.addEventListener("click", () => {
+      selectedStars = parseInt(star.getAttribute("data-value"));
+      updateStarRating();
+      document.getElementById("starValue").value = selectedStars; // Gizli inputa yıldız sayısını set et
+    });
+    star.addEventListener("mouseover", () => {
+      highlightStars(parseInt(star.getAttribute("data-value")));
+    });
+    star.addEventListener("mouseout", () => {
+      updateStarRating();
+    });
+  });
+
+  // Yıldızları soldan sağa doğru renkli hale getirme
+  function updateStarRating() {
+    stars.forEach(star => {
+      const starValue = parseInt(star.getAttribute("data-value"));
+      if (starValue <= selectedStars) {
+        star.style.color = "gold"; // Seçilen yıldızları altın renk yap
+      } else {
+        star.style.color = "gray"; // Diğer yıldızları gri renk yap
+      }
+    });
+  }
+
+  // Fare ile üzerine gelindiğinde yıldızları vurgulama
+  function highlightStars(value) {
+    stars.forEach(star => {
+      const starValue = parseInt(star.getAttribute("data-value"));
+      if (starValue <= value) {
+        star.style.color = "gold"; // Gri yıldızları altın rengiyle vurgula
+      } else {
+        star.style.color = "gray"; // Diğer yıldızları gri tut
+      }
+    });
+  }
+
+  function submitComment() {
+    const comment = document.getElementById("commentInput").value;
+
+    if (comment && selectedStars > 0) {
+      alert("Yorum Gönderildi: " + comment + "\nYıldız: " + selectedStars);
+      // Burada yorum ve yıldız verilerini sunucuya gönderebilirsiniz
+    } else {
+      alert("Lütfen bir yorum yazın ve yıldız seçin.");
+    }
+  }
+
+</script>
+
+</body>
+</html>
